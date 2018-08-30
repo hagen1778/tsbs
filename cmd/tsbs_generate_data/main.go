@@ -5,6 +5,7 @@
 // InfluxDB bulk load format
 // MongoDB BSON format
 // TimescaleDB pseudo-CSV format
+// Prometheus protobuf format
 
 // Supported use cases:
 // devops: scale-var is the number of hosts to simulate, with log messages
@@ -36,7 +37,7 @@ const (
 	formatInflux      = "influx"
 	formatMongo       = "mongo"
 	formatTimescaleDB = "timescaledb"
-	formatPrometheus = "prometheus"
+	formatPrometheus  = "prometheus"
 
 	// Use case choices (make sure to update TestGetConfig if adding a new one)
 	useCaseCPUOnly   = "cpu-only"

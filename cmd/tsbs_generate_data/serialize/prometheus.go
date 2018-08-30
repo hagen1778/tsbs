@@ -12,17 +12,17 @@ import (
 
 const PrometheusBatchSize = 1e4
 
-// PrometheusSerializer writes a Point in a serialized form for Prometheus
+// PrometheusSerializer writes a Point in a serialized form
 type PrometheusSerializer struct {
+	w      io.Writer
 	cur    int
 	series []*prompb.TimeSeries
-	w      io.Writer
 }
 
-// Flush flushes collected series into writer
+// Flush flushes collected series
 func (s *PrometheusSerializer) Flush() error {
 	wr := &prompb.WriteRequest{
-		Timeseries: s.series[:s.cur],
+		Timeseries: s.series,
 	}
 	data, err := wr.Marshal()
 	if err != nil {
@@ -46,7 +46,7 @@ func (s *PrometheusSerializer) Flush() error {
 }
 
 func (s *PrometheusSerializer) Push(ts *prompb.TimeSeries) error {
-	if s.cur > PrometheusBatchSize-1 {
+	if s.cur >= PrometheusBatchSize {
 		if err := s.Flush(); err != nil {
 			return err
 		}

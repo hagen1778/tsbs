@@ -90,6 +90,13 @@ func TestGetSerializer(t *testing.T) {
 		t.Errorf("format '%s' does not run the right serializer: got %T", formatTimescaleDB, got)
 	}
 
+	s = getSerializer(sim, formatPrometheus, out)
+	switch got := s.(type) {
+	case *serialize.PrometheusSerializer:
+	default:
+		t.Errorf("format '%s' does not run the right serializer: got %T", formatPrometheus, got)
+	}
+
 	fatalCalled := false
 	fatal = func(f string, args ...interface{}) {
 		fatalCalled = true
