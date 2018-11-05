@@ -19,7 +19,7 @@ var runner *query.BenchmarkRunner
 
 func init() {
 	runner = query.NewBenchmarkRunner()
-	flag.StringVar(&url, "url", "http://localhost:9090", "Prometheus URL")
+	flag.StringVar(&url, "url", "http://localhost:8081/select/1m/1/foobar/prometheus/", "Prometheus URL")
 	flag.Parse()
 }
 
@@ -76,10 +76,6 @@ func (p *processor) ProcessQuery(q query.Query, _ bool) ([]*query.Stat, error) {
 	r := response{}
 	if err := json.Unmarshal(body, &r); err != nil {
 		return nil, fmt.Errorf("error while unmarshaling response: %s", err)
-	}
-
-	if len(r.Data.Result) == 0 {
-		return nil, fmt.Errorf("response must contain at least one datapoint; got: %#v", r.Data.Result)
 	}
 
 	lag := float64(time.Since(start).Nanoseconds()) / 1e6 // milliseconds

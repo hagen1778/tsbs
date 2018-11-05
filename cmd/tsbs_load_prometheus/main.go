@@ -21,7 +21,7 @@ func init() {
 	loader = load.GetBenchmarkRunner()
 	flag.StringVar(&remoteStorageURL, "url", "http://localhost:8080", "Prometheus Remote Storage Insert daemon URL")
 	flag.Parse()
-	remoteStorageURL = fmt.Sprintf("%s/prometheus/insert", remoteStorageURL)
+	remoteStorageURL = fmt.Sprintf("%s/insert/1d/1/foobar/prometheus/", remoteStorageURL)
 }
 
 type benchmark struct{}
@@ -63,37 +63,29 @@ func (p *processor) Init(numWorker int, _ bool) {
 func (p *processor) Close(_ bool) {}
 
 func (p *processor) ProcessBatch(b load.Batch, doLoad bool) (uint64, uint64) {
-	var err error
 	batch := b.(*batch)
 	if !doLoad || len(batch.Bytes()) == 0 {
 		return 0, 0
 	}
 
-	httpReq, err := http.NewRequest("POST", remoteStorageURL, bytes.NewReader(batch.Bytes()))
-	if err != nil {
-		log.Fatalf("error while creating new request: %s", err)
-	}
-
-	httpReq.Header.Add("Content-Encoding", "snappy")
-	httpReq.Header.Set("Content-Type", "application/x-protobuf")
-	httpReq.Header.Set("X-Prometheus-Remote-Write-Version", "0.1.0")
-
-	var httpResp *http.Response
-	failurePeriod := time.After(time.Second)
 	for {
-		select {
-		case <- failurePeriod:
-			log.Fatalf("server returned HTTP status %d", httpResp.Status)
-		default:
-			httpResp, err = p.Client.Do(httpReq)
-			if err != nil {
-				log.Fatalf("error while executing request: %s", err)
-			}
-			httpResp.Body.Close()
-			if httpResp.StatusCode == http.StatusOK {
-				return uint64(batch.Len()), 0
-			}
-			time.Sleep(time.Millisecond*10)
+		httpReq, err := http.NewRequest("POST", remoteStorageURL, bytes.NewReader(batch.Bytes()))
+		if err != nil {
+			log.Fatalf("error while creating new request: %s", err)
 		}
+		httpReq.Header.Add("Content-Encoding", "snappy")
+		httpReq.Header.Set("Content-Type", "application/x-protobuf")
+		httpReq.Header.Set("X-Prometheus-Remote-Write-Version", "0.1.0")
+
+		httpResp, err := p.Client.Do(httpReq)
+		if err != nil {
+			log.Fatalf("error while executing request: %s", err)
+		}
+		httpResp.Body.Close()
+		if httpResp.StatusCode == http.StatusOK {
+			return uint64(batch.Len()), 0
+		}
+		log.Printf("server returned HTTP status %d. Retrying", httpResp.Status)
+		time.Sleep(time.Millisecond*10)
 	}
 }

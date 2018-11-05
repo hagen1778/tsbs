@@ -148,7 +148,7 @@ func (d *Devops) HighCPUForHosts(qi query.Query, nHosts int) {
 
 	humanLabel := devops.GetHighCPULabel("Influx", nHosts)
 	humanDesc := fmt.Sprintf("%s: %s", humanLabel, interval)
-	influxql := fmt.Sprintf("SELECT * from cpu where usage_user > 90.0 %s and time >= '%s' and time < '%s'", hostWhereClause, interval.StartString(), interval.EndString())
+	influxql := fmt.Sprintf("SELECT max(usage_user) from cpu where usage_user > 90.0 %s and time >= '%s' and time < '%s' group by hostname", hostWhereClause, interval.StartString(), interval.EndString())
 	d.fillInQuery(qi, humanLabel, humanDesc, influxql)
 }
 

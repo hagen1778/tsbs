@@ -8,7 +8,7 @@ source ${EXE_DIR}/load_common.sh
 
 
 # Load new data
-cat ${DATA_FILE} | gunzip | tsbs_load_vmetrics \
+cat ${DATA_FILE} | gunzip | ./tsbs_load_vmetrics \
                                 --db-name=${DATABASE_NAME} \
                                 --workers=${NUM_WORKERS} \
                                 --batch-size=${BATCH_SIZE} \

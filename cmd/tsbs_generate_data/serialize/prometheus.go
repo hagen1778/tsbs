@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/hagen1778/prometheus/prompb"
+	"github.com/prometheus/prometheus/prompb"
 	"github.com/valyala/bytebufferpool"
 	"github.com/klauspost/compress/snappy"
 )
@@ -80,14 +80,14 @@ func (s *PrometheusSerializer) Serialize(p *Point, w io.Writer) (err error) {
 	for i := 0; i < len(p.fieldKeys); i++ {
 		ts := &prompb.TimeSeries{
 			Labels:  labels,
-			Samples: make([]*prompb.Sample, 1),
+			Samples: make([]prompb.Sample, 1),
 		}
 		labelName := &prompb.Label{
 			Name:  "__name__",
 			Value: fmt.Sprintf("%s_%s", prefix, string(p.fieldKeys[i])),
 		}
 		ts.Labels = append(ts.Labels, labelName)
-		ts.Samples[0] = &prompb.Sample{
+		ts.Samples[0] = prompb.Sample{
 			Timestamp: p.timestamp.UnixNano() / 1e6,
 			Value:     toFloat64(p.fieldValues[i]),
 		}

@@ -219,7 +219,7 @@ func (d *Devops) HighCPUForHosts(qi query.Query, nHosts int) {
 	}
 	interval := d.Interval.RandWindow(devops.HighCPUDuration)
 
-	sql := fmt.Sprintf(`SELECT * FROM cpu WHERE usage_user > 90.0 and time >= '%s' AND time < '%s' %s`,
+	sql := fmt.Sprintf(`SELECT max(usage_user) FROM cpu WHERE usage_user > 90.0 and time >= '%s' AND time < '%s' %s group by hostname`,
 		interval.Start.Format(goTimeFmt), interval.End.Format(goTimeFmt), hostWhereClause)
 
 	humanLabel := devops.GetHighCPULabel("TimescaleDB", nHosts)

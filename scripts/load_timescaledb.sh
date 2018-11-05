@@ -19,7 +19,7 @@ while ! pg_isready -h ${DATABASE_HOST}; do
     sleep 1
 done
 
-cat ${DATA_FILE} | gunzip | tsbs_load_timescaledb \
+cat ${DATA_FILE} | gunzip | ./tsbs_load_timescaledb \
                                 --postgres="sslmode=disable" \
                                 --db-name=${DATABASE_NAME} \
                                 --host=${DATABASE_HOST} \

@@ -72,13 +72,13 @@ type queryInfo struct {
 
 // GroupByTime selects the MAX for numMetrics metrics under 'cpu' for nhosts hosts,
 // e.g.:
-// max({__name__=~"metric1|metric2...|metricN",hostname=~"hostname1|hostname2...|hostnameN"})
+// max(max_over_time({__name__=~"metric1|metric2...|metricN",hostname=~"hostname1|hostname2...|hostnameN"})) by (__name__)
 func (d *Devops) GroupByTime(qq query.Query, nHosts, numMetrics int, timeRange time.Duration) {
 	metrics := devops.GetCPUMetricsSlice(numMetrics)
 	hosts := d.GetRandomHosts(nHosts)
 	selectClause := getSelectClause(metrics, hosts)
 	qi := &queryInfo{
-		query:     fmt.Sprintf("max(%s)", selectClause),
+		query:     fmt.Sprintf("max(max_over_time(%s)) by (__name__)", selectClause),
 		label:     fmt.Sprintf("Prometheus %d cpu metric(s), random %4d hosts, random %s by 1m", numMetrics, nHosts, timeRange),
 		timeRange: timeRange,
 		step:      "60",
@@ -89,12 +89,12 @@ func (d *Devops) GroupByTime(qq query.Query, nHosts, numMetrics int, timeRange t
 // GroupByTimeAndPrimaryTag selects the AVG of numMetrics metrics under 'cpu' per device per hour for a day,
 // e.g. in psuedo-SQL:
 //
-// avg({__name__=~"metric1|metric2...|metricN"}) by (hostname)
+// avg(avg_over_time({__name__=~"metric1|metric2...|metricN"})) by (__name__, hostname)
 func (d *Devops) GroupByTimeAndPrimaryTag(qq query.Query, numMetrics int) {
 	metrics := devops.GetCPUMetricsSlice(numMetrics)
 	selectClause := getSelectClause(metrics, []string{})
 	qi := &queryInfo{
-		query:     fmt.Sprintf("avg(%s) by (hostname)", selectClause),
+		query:     fmt.Sprintf("avg(avg_over_time(%s)) by (__name__, hostname)", selectClause),
 		label:     devops.GetDoubleGroupByLabel("Prometheus", numMetrics),
 		timeRange: devops.DoubleGroupByDuration,
 		step:      "3600",
@@ -105,13 +105,12 @@ func (d *Devops) GroupByTimeAndPrimaryTag(qq query.Query, numMetrics int) {
 // MaxAllCPU selects the MAX of all metrics under 'cpu' per hour for nhosts hosts,
 // e.g.:
 //
-// max({__name__=~"cpu_.*", hostname=~"hostname1|hostname2...|hostnameN"})
+// max(max_over_time({hostname=~"hostname1|hostname2...|hostnameN"}))
 func (d *Devops) MaxAllCPU(qq query.Query, nHosts int) {
-	metrics := devops.GetAllCPUMetrics()
 	hosts := d.GetRandomHosts(nHosts)
-	selectClause := getSelectClause(metrics, hosts)
+	selectClause := getSelectClause(nil, hosts)
 	qi := &queryInfo{
-		query:     fmt.Sprintf("max(%s)", selectClause),
+		query:     fmt.Sprintf("max(max_over_time(%s)) by (__name__)", selectClause),
 		label:     devops.GetMaxAllLabel("Prometheus", nHosts),
 		timeRange: devops.MaxAllDuration,
 		step:      "3600",
@@ -123,22 +122,19 @@ func (d *Devops) MaxAllCPU(qq query.Query, nHosts int) {
 // usage between a time period for a number of hosts (if 0, it will search all hosts),
 // e.g.:
 //
-// {__name__=~"cpu_.*", hostname=~"hostname1|hostname2...|hostnameN"} > 90
+// max(max_over_time(cpu_usage_user{hostname=~"hostname1|hostname2...|hostnameN"})) by (hostname) > 90
 func (d *Devops) HighCPUForHosts(qq query.Query, nHosts int) {
-	var q string
+	metrics := devops.GetCPUMetricsSlice(1)
+	var hosts []string
 	if nHosts > 0 {
-		hosts := d.GetRandomHosts(nHosts)
-		hostsClause := getHostClause(hosts)
-		q = fmt.Sprintf("__name__=~\"cpu_.*\", %s", hostsClause)
-	} else {
-		q = "__name__=~\"cpu_.*\""
+		hosts = d.GetRandomHosts(nHosts)
 	}
-	q = fmt.Sprintf("{%s} > 90", q)
+	selectClause := getSelectClause(metrics, hosts)
 	qi := &queryInfo{
-		query:     q,
+		query:     fmt.Sprintf("max(max_over_time(%s)) by (hostname) > 90", selectClause),
 		label:     devops.GetMaxAllLabel("Prometheus", nHosts),
 		timeRange: devops.HighCPUDuration,
-		step:      "60",
+		step:      fmt.Sprintf("%d", devops.HighCPUDuration),
 	}
 	d.fillInQuery(qq, qi)
 }
