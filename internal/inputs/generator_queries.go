@@ -18,6 +18,7 @@ import (
 	"github.com/timescale/tsbs/cmd/tsbs_generate_queries/databases/mongo"
 	"github.com/timescale/tsbs/cmd/tsbs_generate_queries/databases/siridb"
 	"github.com/timescale/tsbs/cmd/tsbs_generate_queries/databases/timescaledb"
+	"github.com/timescale/tsbs/cmd/tsbs_generate_queries/databases/victoriametrics"
 	"github.com/timescale/tsbs/cmd/tsbs_generate_queries/utils"
 )
 
@@ -195,67 +196,81 @@ func (g *QueryGenerator) init(config GeneratorConfig) error {
 	return nil
 }
 
+type factory struct {
+	database  string
+	generator interface{}
+}
+
 func (g *QueryGenerator) initFactories() error {
-	cassandra := &cassandra.BaseGenerator{}
-	if err := g.addFactory(FormatCassandra, cassandra); err != nil {
-		return err
+	cassandra := factory{
+		FormatCassandra,
+		&cassandra.BaseGenerator{},
 	}
 
-	clickhouse := &clickhouse.BaseGenerator{
-		UseTags: g.config.ClickhouseUseTags,
-	}
-	if err := g.addFactory(FormatClickhouse, clickhouse); err != nil {
-		return err
-	}
-
-	cratedb := &cratedb.BaseGenerator{}
-	if err := g.addFactory(FormatCrateDB, cratedb); err != nil {
-		return err
+	clickhouse := factory{
+		FormatClickhouse,
+		&clickhouse.BaseGenerator{
+			UseTags: g.config.ClickhouseUseTags,
+		},
 	}
 
-	influx := &influx.BaseGenerator{}
-	if err := g.addFactory(FormatInflux, influx); err != nil {
-		return err
+	cratedb := factory{
+		FormatCrateDB,
+		&cratedb.BaseGenerator{},
 	}
 
-	timescale := &timescaledb.BaseGenerator{
-		UseJSON:       g.config.TimescaleUseJSON,
-		UseTags:       g.config.TimescaleUseTags,
-		UseTimeBucket: g.config.TimescaleUseTimeBucket,
-	}
-	if err := g.addFactory(FormatTimescaleDB, timescale); err != nil {
-		return err
+	influx := factory{
+		FormatInflux,
+		&influx.BaseGenerator{},
 	}
 
-	siriDB := &siridb.BaseGenerator{}
-	if err := g.addFactory(FormatSiriDB, siriDB); err != nil {
-		return err
+	timescale := factory{
+		FormatTimescaleDB,
+		&timescaledb.BaseGenerator{
+			UseJSON:       g.config.TimescaleUseJSON,
+			UseTags:       g.config.TimescaleUseTags,
+			UseTimeBucket: g.config.TimescaleUseTimeBucket,
+		},
 	}
 
-	mongo := &mongo.BaseGenerator{
-		UseNaive: g.config.MongoUseNaive,
-	}
-	if err := g.addFactory(FormatMongo, mongo); err != nil {
-		return err
+	siriDB := factory{
+		FormatSiriDB,
+		&siridb.BaseGenerator{},
 	}
 
+	mongo := factory{
+		FormatMongo,
+		&mongo.BaseGenerator{
+			UseNaive: g.config.MongoUseNaive,
+		},
+	}
+
+	victoriametrics := factory{
+		FormatVictoriaMetrics,
+		&victoriametrics.BaseGenerator{},
+	}
+
+	return g.addFactories(cassandra, clickhouse, cratedb, influx,
+		timescale, siriDB, mongo, victoriametrics)
+}
+
+func (g *QueryGenerator) addFactories(factories ...factory) error {
+	for _, f := range factories {
+		err := g.addFactory(f.database, f.generator)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
 func (g *QueryGenerator) addFactory(database string, factory interface{}) error {
-	validFactory := false
-
 	switch factory.(type) {
 	case DevopsGeneratorMaker, IoTGeneratorMaker:
-		validFactory = true
-	}
-
-	if !validFactory {
+		g.factories[database] = factory
+	default:
 		return fmt.Errorf(errInvalidFactory, database)
 	}
-
-	g.factories[database] = factory
-
 	return nil
 }
 
