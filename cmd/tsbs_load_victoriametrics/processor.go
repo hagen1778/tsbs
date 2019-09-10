@@ -1,11 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"log"
 	"net/http"
+	"sync/atomic"
 	"time"
 
-	"bytes"
 	"github.com/timescale/tsbs/load"
 )
 
@@ -45,7 +46,7 @@ type worker struct {
 func (w *worker) do(b *batch) (uint64, uint64) {
 	for {
 		r := bytes.NewReader(b.buf.Bytes())
-		req, err := http.NewRequest("POST", vmURL, r)
+		req, err := http.NewRequest("POST", getURL(), r)
 		if err != nil {
 			log.Fatalf("error while creating new request: %s", err)
 		}
@@ -63,4 +64,14 @@ func (w *worker) do(b *batch) (uint64, uint64) {
 		log.Printf("server returned HTTP status %d. Retrying", resp.StatusCode)
 		time.Sleep(time.Millisecond * 10)
 	}
+}
+
+var cur int32
+
+func getURL() string {
+	if len(vmURLs) == 1 {
+		return vmURLs[0]
+	}
+	idx := atomic.AddInt32(&cur, 1) % int32(len(vmURLs))
+	return vmURLs[idx]
 }

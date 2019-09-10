@@ -6,7 +6,7 @@ import (
 	"bytes"
 	"flag"
 	"log"
-	"net/http"
+	"strings"
 	"sync"
 
 	"github.com/timescale/tsbs/load"
@@ -16,11 +16,8 @@ import (
 var (
 	loader  *load.BenchmarkRunner
 	bufPool sync.Pool
-	vmURL   string
+	vmURLs  []string
 )
-
-// allows for testing
-var fatal = log.Fatalf
 
 // Parse args:
 func init() {
@@ -30,8 +27,15 @@ func init() {
 		},
 	}
 	loader = load.GetBenchmarkRunner()
-	flag.StringVar(&vmURL, "url", "http://localhost:8428/write", "VictoriaMetrics ingestion URL")
+	var urls string
+	flag.StringVar(&urls, "urls", "http://localhost:8428/write",
+		"Comma-separated list of VictoriaMetrics ingestion URLs(single-node or VMInsert)")
 	flag.Parse()
+
+	if len(urls) == 0 {
+		log.Fatalf("flag `--urls` must be set")
+	}
+	vmURLs = strings.Split(urls, ",")
 }
 
 // loader.Benchmark interface implementation
@@ -61,9 +65,5 @@ func (b *benchmark) GetDBCreator() load.DBCreator {
 }
 
 func main() {
-	go func() {
-		log.Println(http.ListenAndServe("localhost:6060", nil))
-	}()
-
 	loader.RunBenchmark(&benchmark{}, load.SingleQueue)
 }
