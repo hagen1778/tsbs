@@ -55,7 +55,6 @@ func newProcessor() query.Processor {
 
 // query.Processor interface implementation
 type processor struct {
-	*http.Client
 	url string
 
 	prettyPrintResponses bool
@@ -63,9 +62,6 @@ type processor struct {
 
 // query.Processor interface implementation
 func (p *processor) Init(workerNum int) {
-	p.Client = &http.Client{
-		Timeout: time.Minute,
-	}
 	p.url = vmURLs[workerNum%len(vmURLs)]
 	p.prettyPrintResponses = runner.DoPrintResponses()
 }

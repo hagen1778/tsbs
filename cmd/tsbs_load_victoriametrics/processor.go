@@ -10,14 +10,10 @@ import (
 )
 
 type processor struct {
-	*http.Client
 	url string
 }
 
 func (p *processor) Init(workerNum int, _ bool) {
-	p.Client = &http.Client{
-		Timeout: time.Minute,
-	}
 	p.url = vmURLs[workerNum%len(vmURLs)]
 }
 
@@ -39,7 +35,7 @@ func (p *processor) do(b *batch) (uint64, uint64) {
 		}
 		req.Header.Add("Content-Encoding", "snappy")
 		req.Header.Set("Content-Type", "application/x-protobuf")
-		resp, err := p.Do(req)
+		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
 			log.Fatalf("error while executing request: %s", err)
 		}
