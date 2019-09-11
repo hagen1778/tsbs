@@ -60,6 +60,11 @@ func (d *Devops) GroupByTime(qq query.Query, nHosts, numMetrics int, timeRange t
 // 		{__name__=~"metric1|metric2...|metricN"}[1h]
 // 	)
 // ) by (hostname)
+//
+// Resultsets:
+// double-groupby-1
+// double-groupby-5
+// double-groupby-all
 func (d *Devops) GroupByTimeAndPrimaryTag(qq query.Query, numMetrics int) {
 	metrics := devops.MustGetCPUMetricsSlice(numMetrics)
 	selectClause := getSelectClause(metrics, nil)
@@ -106,10 +111,10 @@ func (d *Devops) HighCPUForHosts(qq query.Query, nHosts int) {
 		hostClause = getHostClause(hosts)
 	}
 	qi := &queryInfo{
-		query:    fmt.Sprintf("max({__name__=~'cpu_.*'%s}) by (cpu_usage_user) > 90", hostClause),
-		label:    devops.GetMaxAllLabel("Victoria etrics", nHosts),
+		query:    fmt.Sprintf("max(cpu_usage_user{%s}) > 90", hostClause),
+		label:    devops.GetMaxAllLabel("VictoriaMetrics", nHosts),
 		interval: d.Interval.MustRandWindow(devops.HighCPUDuration),
-		step:     fmt.Sprintf("%f.0", devops.HighCPUDuration.Seconds()),
+		step:     fmt.Sprintf("%d", int(devops.HighCPUDuration.Seconds())),
 	}
 	d.fillInQuery(qq, qi)
 }
@@ -138,5 +143,5 @@ func getSelectClause(metrics, hosts []string) string {
 	if len(hosts) > 0 {
 		return fmt.Sprintf("{__name__=~'cpu_(%s)', %s}", metricsClause, hostsClause)
 	}
-	return fmt.Sprintf("{__name__=~'cpu_(%s)'", metricsClause)
+	return fmt.Sprintf("{__name__=~'cpu_(%s)'}", metricsClause)
 }

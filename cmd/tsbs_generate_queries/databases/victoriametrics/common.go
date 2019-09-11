@@ -3,7 +3,6 @@ package victoriametrics
 import (
 	"fmt"
 	"net/url"
-	"os"
 	"strconv"
 	"time"
 
@@ -51,21 +50,20 @@ type queryInfo struct {
 func (g *BaseGenerator) fillInQuery(qq query.Query, qi *queryInfo) {
 	q := qq.(*query.HTTP)
 	q.HumanLabel = []byte(qi.label)
-	q.HumanDescription = []byte(fmt.Sprintf("%s: %s", qi.label, qi.interval.StartString()))
+	if qi.interval != nil {
+		q.HumanDescription = []byte(fmt.Sprintf("%s: %s", qi.label, qi.interval.StartString()))
+	}
 	q.Method = []byte("GET")
 
 	v := url.Values{}
 	v.Set("query", qi.query)
 	if qi.instant {
-		v.Set("timestamp", strconv.FormatInt(qi.interval.EndUnixNano()/1e9, 10))
-		q.Path = []byte(fmt.Sprintf("/query?%s", v.Encode()))
+		q.Path = []byte(fmt.Sprintf("/api/v1/query?%s", v.Encode()))
 	} else {
 		v.Set("start", strconv.FormatInt(qi.interval.StartUnixNano()/1e9, 10))
 		v.Set("end", strconv.FormatInt(qi.interval.EndUnixNano()/1e9, 10))
 		v.Set("step", qi.step)
-		q.Path = []byte(fmt.Sprintf("/query_range?%s", v.Encode()))
+		q.Path = []byte(fmt.Sprintf("/api/v1/query_range?%s", v.Encode()))
 	}
-	fmt.Println(">>", string(q.Path))
-	fmt.Fprintf(os.Stderr, qi.query)
 	q.Body = nil
 }
