@@ -4,27 +4,21 @@ import (
 	"bytes"
 	"log"
 	"net/http"
-	"sync/atomic"
 	"time"
 
 	"github.com/timescale/tsbs/load"
 )
 
 type processor struct {
-	workerPool chan *worker
+	*http.Client
+	url string
 }
 
 func (p *processor) Init(workerNum int, _ bool) {
-	if workerNum == 0 {
-		workerNum = 1
-	}
-	client := &http.Client{
+	p.Client = &http.Client{
 		Timeout: time.Minute,
 	}
-	p.workerPool = make(chan *worker, workerNum)
-	for i := 0; i < workerNum; i++ {
-		p.workerPool <- &worker{client}
-	}
+	p.url = vmURLs[workerNum%len(vmURLs)]
 }
 
 func (p *processor) ProcessBatch(b load.Batch, doLoad bool) (metricCount, rowCount uint64) {
@@ -32,27 +26,20 @@ func (p *processor) ProcessBatch(b load.Batch, doLoad bool) (metricCount, rowCou
 	if !doLoad {
 		return batch.metrics, batch.rows
 	}
-
-	w := <-p.workerPool
-	mc, rc := w.do(batch)
-	p.workerPool <- w
+	mc, rc := p.do(batch)
 	return mc, rc
 }
 
-type worker struct {
-	*http.Client
-}
-
-func (w *worker) do(b *batch) (uint64, uint64) {
+func (p *processor) do(b *batch) (uint64, uint64) {
 	for {
 		r := bytes.NewReader(b.buf.Bytes())
-		req, err := http.NewRequest("POST", getURL(), r)
+		req, err := http.NewRequest("POST", p.url, r)
 		if err != nil {
 			log.Fatalf("error while creating new request: %s", err)
 		}
 		req.Header.Add("Content-Encoding", "snappy")
 		req.Header.Set("Content-Type", "application/x-protobuf")
-		resp, err := w.Do(req)
+		resp, err := p.Do(req)
 		if err != nil {
 			log.Fatalf("error while executing request: %s", err)
 		}
@@ -64,14 +51,4 @@ func (w *worker) do(b *batch) (uint64, uint64) {
 		log.Printf("server returned HTTP status %d. Retrying", resp.StatusCode)
 		time.Sleep(time.Millisecond * 10)
 	}
-}
-
-var cur int32
-
-func getURL() string {
-	if len(vmURLs) == 1 {
-		return vmURLs[0]
-	}
-	idx := atomic.AddInt32(&cur, 1) % int32(len(vmURLs))
-	return vmURLs[idx]
 }

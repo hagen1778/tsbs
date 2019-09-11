@@ -33,7 +33,7 @@ func init() {
 	flag.Parse()
 
 	if len(urls) == 0 {
-		log.Fatalf("flag `--urls` must be set")
+		log.Fatalf("missing `urls` flag")
 	}
 	vmURLs = strings.Split(urls, ",")
 }

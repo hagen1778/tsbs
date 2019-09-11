@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"github.com/timescale/tsbs/load"
+	"log"
 )
 
 const errNotThreeTuplesFmt = "parse error: line does not have 3 tuples, has %d"
@@ -19,7 +20,7 @@ func (d *decoder) Decode(_ *bufio.Reader) *load.Point {
 	if !ok && d.scanner.Err() == nil { // nothing scanned & no error = EOF
 		return nil
 	} else if !ok {
-		fatal("scan error: %v", d.scanner.Err())
+		log.Fatalf("scan error: %v", d.scanner.Err())
 		return nil
 	}
 	return load.NewPoint(d.scanner.Bytes())
@@ -46,7 +47,7 @@ func (b *batch) Append(item *load.Point) {
 
 	// Each influx line is format "csv-tags csv-fields timestamp"
 	if args := bytes.Count(that, spaceSep); args != 2 {
-		fatal(errNotThreeTuplesFmt, args+1)
+		log.Fatalf(errNotThreeTuplesFmt, args+1)
 		return
 	}
 
