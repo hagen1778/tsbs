@@ -1,6 +1,7 @@
 # TSBS Supplemental Guide: VictoriaMetrics
 
-VictoriaMetrics is fast, cost-effective and scalable time-series database.
+[VictoriaMetrics](https://github.com/VictoriaMetrics/VictoriaMetrics) is fast,
+cost-effective and scalable time-series database.
 It can be used as long-term remote storage for Prometheus.
 This supplemental guide explains how the data generated for TSBS is stored,
 additional flags available when using the data importer (`tsbs_load_victoriametrics`),
@@ -22,9 +23,27 @@ An example for the `cpu-only` use case:
 cpu,hostname=host_0,region=eu-central-1,datacenter=eu-central-1b,rack=21,os=Ubuntu15.10,arch=x86,team=SF,service=6,service_version=0,service_environment=test usage_user=58.1317132304976170,usage_system=2.6224297271376256,usage_idle=24.9969495069947882,usage_nice=61.5854484633778867,usage_iowait=22.9481393231639395,usage_irq=63.6499207106198313,usage_softirq=6.4098777048301052,usage_steal=44.8799140503027445,usage_guest=80.5028770761136201,usage_guest_nice=38.2431182911542820 1451606400000000000
 ```
 
+Remember to set `-timestamp-start` and `-timestamp-end` flags in range
+of VictoriaMetrics [retention period](https://github.com/VictoriaMetrics/VictoriaMetrics#how-to-start-victoriametrics).
+All data out of retention period will be automatically deleted after insertion.
+
+One of the ways to generate data for insertion is to use `scripts/generate_data.sh`:
+```text
+FORMATS=victoriametrics TS_START=2019-09-01T00:00:00Z TS_END=2019-09-03T00:00:00Z  ./scripts/generate_data.sh
+```
+
 ---
 
-## `tsbs_load_victoriametrics` Additional Flags
+## `tsbs_load_victoriametrics`
+
+See recommendations for insertion in [InfluxDB protocol](https://github.com/VictoriaMetrics/VictoriaMetrics#how-to-send-data-from-influxdb-compatible-agents-such-as-telegraf).
+
+One of the ways to load data in VictoriaMetrics is to use `scripts/load_victoriametrics.sh`:
+```text
+./scripts/load_victoriametrics.sh
+```
+
+### Additional Flags
 
 #### `-urls` (type: `string`, default: `http://localhost:8428/write`)
 
@@ -37,15 +56,31 @@ distributed in a round robin fashion across the URLs.
 ## Generating queries
 
 VictoriaMetrics supports PromQL which has some limitations
-comparing to SQL. Because of this VcitoriaMetrics query generator
-lacks of query type `groupby-orderby-limit` implementation.
+comparing to SQL. Because of this VictoriaMetrics query generator
+lacks for implementation of query type `groupby-orderby-limit`.
+
+Of of the ways to generate queries for VictoriaMetrics is to use `scripts/generate_queries.sh`:
+```text
+ FORMATS=victoriametrics TS_START=2019-09-01T00:00:00Z TS_END=2019-09-03T00:00:00Z \
+ QUERY_TYPES="cpu-max-all-8 double-groupby-1" ./scripts/generate_queries.sh
+```
+
+Consider to generate queries with same params as generated data.
 
 ---
 
-## `tsbs_run_queries_victoriametrics` Additional Flags
+## `tsbs_run_queries_victoriametrics`
+
+To run generated queries follow examples in documentation:
+```text
+cat /tmp/bulk_queries/victoriametrics-cpu-max-all-8-queries.gz | gunzip | tsbs_run_queries_victoriametrics
+```
+
+### Additional flags
 
 #### `-urls` (type: `string`, default: `http://localhost:8428`)
 
 Comma-separated list of URLs to connect to for querying. It can be
 just a single-version URL or list of VMSelect URLs. Workers will be
 distributed in a round robin fashion across the URLs.
+
