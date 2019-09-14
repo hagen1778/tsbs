@@ -13,7 +13,7 @@ Current databases supported:
 + ClickHouse [(supplemental docs)](docs/clickhouse.md)
 + CrateDB [(supplemental docs)](docs/cratedb.md)
 + SiriDB [(supplemental docs)](docs/siridb.md)
-+ VictoriaMetrics [(supplemental docs)](docs/siridb.md)
++ VictoriaMetrics [(supplemental docs)](docs/victoriametrics.md)
 
 ## Overview
 

@@ -33,8 +33,6 @@ func (p *processor) do(b *batch) (uint64, uint64) {
 		if err != nil {
 			log.Fatalf("error while creating new request: %s", err)
 		}
-		req.Header.Add("Content-Encoding", "snappy")
-		req.Header.Set("Content-Type", "application/x-protobuf")
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
 			log.Fatalf("error while executing request: %s", err)

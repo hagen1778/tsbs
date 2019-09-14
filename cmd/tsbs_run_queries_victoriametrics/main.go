@@ -5,19 +5,18 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
-	"strings"
-	"time"
-
-	"bytes"
-	_ "github.com/kshvakov/clickhouse"
-	"github.com/timescale/tsbs/query"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"strings"
+	"time"
+
+	"github.com/timescale/tsbs/query"
 )
 
 // Program option vars:

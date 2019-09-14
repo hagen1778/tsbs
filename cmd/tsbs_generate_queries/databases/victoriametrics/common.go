@@ -14,7 +14,7 @@ import (
 
 type BaseGenerator struct{}
 
-// GenerateEmptyQuery returns an empty
+// GenerateEmptyQuery returns an empty query.HTTP.
 func (g *BaseGenerator) GenerateEmptyQuery() query.Query {
 	return query.NewHTTP()
 }
@@ -42,8 +42,6 @@ type queryInfo struct {
 	interval *iutils.TimeInterval
 	// time period to group by in seconds
 	step string
-	// whether to use instant query
-	instant bool
 }
 
 // fill Query fills the query struct with data
@@ -57,13 +55,9 @@ func (g *BaseGenerator) fillInQuery(qq query.Query, qi *queryInfo) {
 
 	v := url.Values{}
 	v.Set("query", qi.query)
-	if qi.instant {
-		q.Path = []byte(fmt.Sprintf("/api/v1/query?%s", v.Encode()))
-	} else {
-		v.Set("start", strconv.FormatInt(qi.interval.StartUnixNano()/1e9, 10))
-		v.Set("end", strconv.FormatInt(qi.interval.EndUnixNano()/1e9, 10))
-		v.Set("step", qi.step)
-		q.Path = []byte(fmt.Sprintf("/api/v1/query_range?%s", v.Encode()))
-	}
+	v.Set("start", strconv.FormatInt(qi.interval.StartUnixNano()/1e9, 10))
+	v.Set("end", strconv.FormatInt(qi.interval.EndUnixNano()/1e9, 10))
+	v.Set("step", qi.step)
+	q.Path = []byte(fmt.Sprintf("/api/v1/query_range?%s", v.Encode()))
 	q.Body = nil
 }

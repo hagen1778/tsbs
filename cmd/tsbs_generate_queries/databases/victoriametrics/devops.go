@@ -19,16 +19,8 @@ func (d *Devops) GroupByOrderByLimit(qi query.Query) {
 	panic("GroupByOrderByLimit not supported in PromQL")
 }
 
-// LastPointPerHost finds the last row for every host in the dataset
-// e.g. in pseudo-PromQL:
-// sum({__name__=~"cpu_.*"}) by(hostname)
 func (d *Devops) LastPointPerHost(qq query.Query) {
-	qi := &queryInfo{
-		query:   "sum({__name__=~'cpu_.*'}) by(hostname)",
-		label:   "VictoriaMetrics last point per host",
-		instant: true,
-	}
-	d.fillInQuery(qq, qi)
+	panic("LastPointPerHost not supported in PromQL")
 }
 
 // GroupByTime selects the MAX for numMetrics metrics under 'cpu'
@@ -44,7 +36,7 @@ func (d *Devops) GroupByTime(qq query.Query, nHosts, numMetrics int, timeRange t
 	hosts := d.MustGetRandomHosts(nHosts)
 	selectClause := getSelectClause(metrics, hosts)
 	qi := &queryInfo{
-		query:    fmt.Sprintf("max(max_over_time(%s)) by (__name__)", selectClause),
+		query:    fmt.Sprintf("max(max_over_time(%s[1m])) by (__name__)", selectClause),
 		label:    fmt.Sprintf("VictoriaMetrics %d cpu metric(s), random %4d hosts, random %s by 1m", numMetrics, nHosts, timeRange),
 		interval: d.Interval.MustRandWindow(timeRange),
 		step:     "60",
@@ -59,7 +51,7 @@ func (d *Devops) GroupByTime(qq query.Query, nHosts, numMetrics int, timeRange t
 // 	avg_over_time(
 // 		{__name__=~"metric1|metric2...|metricN"}[1h]
 // 	)
-// ) by (hostname)
+// ) by (__name__, hostname)
 //
 // Resultsets:
 // double-groupby-1
@@ -84,7 +76,7 @@ func (d *Devops) GroupByTimeAndPrimaryTag(qq query.Query, numMetrics int) {
 // 	max_over_time(
 // 		{hostname=~"hostname1|hostname2...|hostnameN"}[1h]
 // 	)
-// )
+// ) by (__name__)
 func (d *Devops) MaxAllCPU(qq query.Query, nHosts int) {
 	hosts := d.MustGetRandomHosts(nHosts)
 	selectClause := getSelectClause(devops.GetAllCPUMetrics(), hosts)
@@ -102,8 +94,10 @@ func (d *Devops) MaxAllCPU(qq query.Query, nHosts int) {
 // e.g. in pseudo-PromQL:
 //
 // max(
-// 	{__name__=~'cpu_.*', hostname=~"hostname1|hostname2...|hostnameN"}
-// ) by (cpu_usage_user) > 90
+//	max_over_time(
+// 		{__name__=~'cpu_.*', hostname=~"hostname1|hostname2...|hostnameN"}[12h]
+// 	)
+// ) by (hostname) > 90
 func (d *Devops) HighCPUForHosts(qq query.Query, nHosts int) {
 	var hostClause string
 	if nHosts > 0 {
@@ -111,7 +105,7 @@ func (d *Devops) HighCPUForHosts(qq query.Query, nHosts int) {
 		hostClause = getHostClause(hosts)
 	}
 	qi := &queryInfo{
-		query:    fmt.Sprintf("max(cpu_usage_user{%s}) > 90", hostClause),
+		query:    fmt.Sprintf("max(max_over_time(cpu_usage_user{%s}[12h])) by (hostname) > 90", hostClause),
 		label:    devops.GetMaxAllLabel("VictoriaMetrics", nHosts),
 		interval: d.Interval.MustRandWindow(devops.HighCPUDuration),
 		step:     fmt.Sprintf("%d", int(devops.HighCPUDuration.Seconds())),
